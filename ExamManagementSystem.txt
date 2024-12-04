@@ -1,0 +1,255 @@
+import java.awt.*;
+import java.awt.event.*;
+import java.util.ArrayList;
+
+public class Main extends Frame {
+    public Main() {
+        setTitle("Exam Management System");
+        setSize(400, 300);
+        setLayout(new FlowLayout());
+
+        Button loginButton = new Button("Login");
+        loginButton.addActionListener(e -> new LoginWindow());
+        add(loginButton);
+        addWindowListener(new WindowAdapter() {
+            public void windowClosing(WindowEvent e) {
+                System.exit(0);
+            }
+        });
+        setVisible(true);
+    }
+
+    public static void main(String[] args) {
+        new Main();
+    }
+}
+
+class LoginWindow extends Frame {
+    private TextField usernameField, passwordField;
+
+    public LoginWindow() {
+        setTitle("Login");
+        setSize(300, 200);
+        setLayout(new GridLayout(3, 2));
+
+        usernameField = new TextField();
+        passwordField = new TextField();
+        passwordField.setEchoChar('*');
+
+        Button loginButton = new Button("Login");
+        loginButton.addActionListener(e -> {
+            String username = usernameField.getText();
+            String password = passwordField.getText();
+            if ("instructor".equalsIgnoreCase(username) && "instructor123".equals(password)) {
+                new InstructorDashboard();
+                dispose();
+            } else if ("student".equalsIgnoreCase(username) && "student123".equals(password)) {
+                new StudentDashboard();
+                dispose();
+            } else {
+                showError("Invalid credentials!");
+            }
+        });
+
+        add(new Label("Username:")); add(usernameField);
+        add(new Label("Password:")); add(passwordField);
+        add(loginButton);
+
+        addWindowListener(new WindowAdapter() {
+            public void windowClosing(WindowEvent e) {
+                dispose();
+            }
+        });
+        setVisible(true);
+    }
+
+    private void showError(String message) {
+        Frame errorFrame = new Frame("Error");
+        errorFrame.setSize(200, 100);
+        errorFrame.setLayout(new FlowLayout());
+        errorFrame.add(new Label(message));
+        errorFrame.setVisible(true);
+    }
+}
+
+class InstructorDashboard extends Frame {
+    private int numberOfQuestions;
+
+    public InstructorDashboard() {
+        setTitle("Instructor Dashboard");
+        setSize(400, 300);
+        setLayout(new FlowLayout());
+
+        TextField questionCountField = new TextField();
+
+        Button setQuestionsButton = new Button("Set Questions");
+        setQuestionsButton.addActionListener(e -> {
+            try {
+                numberOfQuestions = Integer.parseInt(questionCountField.getText());
+                new CreateExamWindow(numberOfQuestions);
+                dispose();
+            } catch (NumberFormatException ex) {
+                showError("Please enter a valid number.");
+            }
+        });
+
+        add(new Label("Set Number of Questions:")); add(questionCountField);
+        add(setQuestionsButton);
+
+        addWindowListener(new WindowAdapter() {
+            public void windowClosing(WindowEvent e) {
+                dispose();
+            }
+        });
+        setVisible(true);
+    }
+
+    private void showError(String message) {
+        Frame errorFrame = new Frame("Error");
+        errorFrame.setSize(200, 100);
+        errorFrame.setLayout(new FlowLayout());
+        errorFrame.add(new Label(message));
+        errorFrame.setVisible(true);
+    }
+}
+
+class CreateExamWindow extends Frame {
+    private int numberOfQuestions;
+    private ArrayList<String> questions, answers;
+    private TextField[] questionFields, answerFields;
+
+    public CreateExamWindow(int numberOfQuestions) {
+        this.numberOfQuestions = numberOfQuestions;
+        questions = new ArrayList<>();
+        answers = new ArrayList<>();
+
+        setTitle("Create Exam");
+        setSize(400, 300);
+        setLayout(new GridLayout(numberOfQuestions + 1, 2));
+
+        questionFields = new TextField[numberOfQuestions];
+        answerFields = new TextField[numberOfQuestions];
+
+        for (int i = 0; i < numberOfQuestions; i++) {
+            questionFields[i] = new TextField();
+            answerFields[i] = new TextField();
+            add(new Label("Question " + (i + 1) + ":")); add(questionFields[i]);
+            add(new Label("Answer " + (i + 1) + ":")); add(answerFields[i]);
+        }
+
+        Button saveButton = new Button("Save Exam");
+        saveButton.addActionListener(e -> saveExam());
+        add(saveButton);
+
+        addWindowListener(new WindowAdapter() {
+            public void windowClosing(WindowEvent e) {
+                dispose();
+            }
+        });
+        setVisible(true);
+    }
+
+    private void saveExam() {
+        for (int i = 0; i < numberOfQuestions; i++) {
+            questions.add(questionFields[i].getText());
+            answers.add(answerFields[i].getText());
+        }
+        ExamData.setExamQuestions(questions);
+        ExamData.setExamAnswers(answers);
+        dispose();
+    }
+}
+
+class StudentDashboard extends Frame {
+    public StudentDashboard() {
+        setTitle("Student Dashboard");
+        setSize(400, 300);
+        setLayout(new FlowLayout());
+
+        Button takeExamButton = new Button("Take Exam");
+        takeExamButton.addActionListener(e -> new TakeExamWindow());
+        add(takeExamButton);
+
+        addWindowListener(new WindowAdapter() {
+            public void windowClosing(WindowEvent e) {
+                dispose();
+            }
+        });
+        setVisible(true);
+    }
+}
+
+class TakeExamWindow extends Frame {
+    private TextField[] answerFields;
+
+    public TakeExamWindow() {
+        setTitle("Take Exam");
+
+        ArrayList<String> questions = ExamData.getExamQuestions();
+        ArrayList<String> correctAnswers = ExamData.getExamAnswers();
+
+        if (questions == null || correctAnswers == null || questions.size() != correctAnswers.size()) {
+            dispose();
+            return;
+        }
+
+        setSize(400, 300);
+        setLayout(new GridLayout(questions.size() + 1, 2));
+
+        answerFields = new TextField[questions.size()];
+        for (int i = 0; i < questions.size(); i++) {
+            answerFields[i] = new TextField();
+            add(new Label(questions.get(i))); add(answerFields[i]);
+        }
+
+        Button submitButton = new Button("Submit Exam");
+        submitButton.addActionListener(e -> gradeExam(correctAnswers));
+        add(submitButton);
+
+        addWindowListener(new WindowAdapter() {
+            public void windowClosing(WindowEvent e) {
+                dispose();
+            }
+        });
+        setVisible(true);
+    }
+
+    private void gradeExam(ArrayList<String> correctAnswers) {
+        int score = 0;
+        for (int i = 0; i < correctAnswers.size(); i++) {
+            if (answerFields[i].getText().equalsIgnoreCase(correctAnswers.get(i))) {
+                score++;
+            }
+        }
+        showResult(score);
+    }
+
+    private void showResult(int score) {
+        Frame resultFrame = new Frame("Exam Results");
+        resultFrame.setSize(200, 100);
+        resultFrame.setLayout(new FlowLayout());
+        resultFrame.add(new Label("You scored " + score + " out of " + answerFields.length));
+        resultFrame.setVisible(true);
+    }
+}
+
+class ExamData {
+    private static ArrayList<String> examQuestions;
+    private static ArrayList<String> examAnswers;
+
+    public static void setExamQuestions(ArrayList<String> questions) {
+        examQuestions = questions;
+    }
+
+    public static ArrayList<String> getExamQuestions() {
+        return examQuestions;
+    }
+
+    public static void setExamAnswers(ArrayList<String> answers) {
+        examAnswers = answers;
+    }
+
+    public static ArrayList<String> getExamAnswers() {
+        return examAnswers;
+    }
+}
